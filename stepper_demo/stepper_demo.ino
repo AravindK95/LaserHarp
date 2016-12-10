@@ -8,7 +8,7 @@
 char user_input;
 int x;
 int step_dur = 650;
-int step_num = 34;
+int step_num = 68;
 
 void setup() {
   pinMode(STEP, OUTPUT);
