@@ -6,6 +6,8 @@ import sys
 import threading
 import time
 import serial
+import struct
+from subprocess import Popen, PIPE
 
 from samples import samples2
 
@@ -36,7 +38,33 @@ samples = [
 #"samples/68446__pinkyfinger__piano-f.wav",
 "samples/68448__pinkyfinger__piano-g.wav"]
 
+flute_samples = [
+"flute/C.mp3",
+"flute/D.mp3",
+"flute/E.mp3",
+"flute/F.mp3",
+"flute/G.mp3",
+"flute/A.mp3",
+"flute/B.mp3",
+"flute/high_C.mp3"]
+
+
+def octave(pos, val):
+    if val < thresholds[pos][0] + 30:
+        return 0
+    elif val < thresholds[pos][1] + 30:
+        return 2
+    else:
+        return 1
+    # if val > 200:
+    #     return 1
+    # elif val > 140:
+    #     return 2
+    # else:
+    #     return 0
+
 def play_wav(p, filename, octave=1):
+    print("opening", filename)
     wf = wave.open(filename, 'rb')
 
     stream = p.open(format=p.get_format_from_width(wf.getsampwidth()),
@@ -53,12 +81,21 @@ def play_wav(p, filename, octave=1):
     stream.stop_stream()
     stream.close()
 
+def read_calibration(filename):
+    data = eval(open(filename).read())
+    thresholds = [[0 for _ in range(2)] for __ in range(8)]
+    for index, layer in enumerate(data[:-1]):
+        for pos, val in layer:
+            thresholds[pos][index] = max(val, thresholds[pos][index])
+    return thresholds
+
 # if len(sys.argv) < 2:
 #     print("Plays a wave file.\n\nUsage: %s filename.wav" % sys.argv[0])
 #     sys.exit(-1)
 
 # wf = wave.open(sys.argv[1], 'rb')
-
+thresholds = read_calibration(sys.argv[2])
+print(thresholds)
 p = pyaudio.PyAudio()
 # threads = [threading.Thread(target=play_wav, args=(p, sample)) for sample in samples*3]
 # for thread in threads:
@@ -74,20 +111,36 @@ last_byte=0
 vals = [0]*8
 
 while True:
-    pos = int(s.read()[0])
-    if (pos > 7):
+    p0 = struct.unpack('B', s.read())[0]
+    if p0 >> 7 != 0:
         continue
-    val = int(s.read()[0]) - 10
+    p1 = struct.unpack('B', s.read())[0]
+
+    pos = (p0 >> 4) & (0x7)
+    val = ((p0 & 0xF) << 7) | (p1 & 0x7F)
+    print(pos, val)
+    val = octave(pos, val)
+
+    #print("packet", bin(p0), bin(p1))
+
+    # pos = int(s.read()[0])
+    # if (pos > 7):
+    #     continue
+    # val = int(s.read()[0]) - 10
     if (val != vals[pos]):
         vals[pos] = val
-        if val:
-            print(pos, cmajor[pos], cmajor[pos]-13+12*val)
-            threading.Thread(target=play_wav, args=(p, "samples2/" + samples2[cmajor[pos]-13+12*1], 1)).start()
+        if val == 1:
+            #print(pos, cmajor[pos], cmajor[pos]-13+12*val)
+            threading.Thread(target=play_wav, args=(p, "samples2/" + samples2[cmajor[pos]-13+12*val], 1)).start()
+        elif val == 2:
+            threading.Thread(target=play_wav, args=(p, "samples2/" + samples2[cmajor[pos]-13+12*val], 1)).start()
+            #Popen(['mpg321', flute_samples[pos]], stdout=PIPE, close_fds=True)
+            #threading.Thread(target=play_wav, args=(p, flute_samples[pos], 1)).start()
     # for i in range(8):
     #     if (byte & (1 << i)) != 0 and (last_byte & (1 << i)) == 0: samples2[cmajor[pos]+12*val-13]
     #         threading.Thread(target=play_wav, args=(p, samples[i])).start()
     # last_byte = byte
-    print(pos, val)
+    
 
 p.terminate()
 

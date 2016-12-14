@@ -4,17 +4,13 @@
 //#define MS3  A3
 //#define STEP A4
 //#define DIR  A5
+
 #define EN   13
 #define MS1  12
 #define MS2  11
 #define MS3  10
 #define STEP 9
 #define DIR  8
-
-
-enum mode_t {CALIBRATE, HARP};
-mode_t mode = HARP;
-
 
 #include "TimerOne.h"
 
@@ -123,21 +119,21 @@ void stepMotor(void) {
         }
         stepper_state = MOVING;
 
-        Serial.print(pos);
-        Serial.print(" ");
+        //Serial.print(pos);
+        //Serial.print(" ");
         
         int x = 0;
         for (int i = 0; i < 7; i++) {
           //while(stepper_state==MOVING){}
           int temp = analogRead(A0);
-          Serial.print(temp);
-          Serial.print(" ");
+          //Serial.print(temp);
+          //Serial.print(" ");
           if (temp > x) {
             x = temp;
           }
         }
         digitalWrite(LASER, LOW);
-        Serial.println();
+        //Serial.println();
 //       uint8_t new_data = data;
 //       if (x > 300) {
 //           new_data = data | (1 << pos);
@@ -154,19 +150,19 @@ void stepMotor(void) {
 
 
 
-//       if (x > 1024) {
-//          Serial.write(pos);
-//          Serial.write(10 + 4); 
-//       } else if (x > 600) {
-//          Serial.write(pos);
-//          Serial.write(10 + 1); 
-//       } else if (x > 200) {
-//          Serial.write(pos);
-//          Serial.write(10 + 2); 
-//       } else {
-//          Serial.write(pos);
-//          Serial.write(10 + 0); 
-//       }
+       if (x > 1024) {
+          Serial.write(pos);
+          Serial.write(10 + 4); 
+       } else if (x > 600) {
+          Serial.write(pos);
+          Serial.write(10 + 1); 
+       } else if (x > 200) {
+          Serial.write(pos);
+          Serial.write(10 + 2); 
+       } else {
+          Serial.write(pos);
+          Serial.write(10 + 0); 
+       }
 //       
        
        
@@ -221,50 +217,31 @@ void loop() {
     if (i==4 || true)
         digitalWrite(LASER, HIGH);
     int x = 0;
-
-    int temps[12];
     for (int j = 0; j < 12; j++) {
       //while(stepper_state==MOVING){}
       int temp = analogRead(A0);
-      temps[j] = temp;
+      //Serial.print(temp);
+      //Serial.print(" ");
       if (temp > x) {
         x = temp;
       }
     }
     digitalWrite(LASER, LOW);
 
-    uint8_t packet0 = (i << 4) | ((x >> 7) & 0xF);
-    uint8_t packet1 = (1 << 7) | (x & 0x7F);
-    Serial.write(packet0);
-    Serial.write(packet1);
 
-
-
-    // if (mode == CALIBRATE) {
-    //   Serial.print(pos);
-    //   Serial.print(" ");
-    //   for (int j = 0; j < 12; j++) {
-    //     Serial.print(temps[j]);
-    //     Serial.print(" ");
-    //   }
-    //   Serial.println();
-    // }
-
-    // if (mode == HARP) {
-    //   if (x > 1024) {
-    //      Serial.write(i);
-    //      Serial.write(10 + 4); 
-    //   } else if (x > 600) {
-    //      Serial.write(i);
-    //      Serial.write(10 + 1); 
-    //   } else if (x > 200) {
-    //      Serial.write(i);
-    //      Serial.write(10 + 2); 
-    //   } else {
-    //      Serial.write(i);
-    //      Serial.write(10 + 0); 
-    //   }
-    // }
+    if (x > 1024) {
+       Serial.write(i);
+       Serial.write(10 + 4); 
+    } else if (x > 600) {
+       Serial.write(i);
+       Serial.write(10 + 1); 
+    } else if (x > 200) {
+       Serial.write(i);
+       Serial.write(10 + 2); 
+    } else {
+       Serial.write(i);
+       Serial.write(10 + 0); 
+    }
     delayMicroseconds(big_read_delay);
 
     for (int j = 0; j < 2; j++) {
@@ -295,12 +272,11 @@ void loop() {
     if (i == 4 || true)
         digitalWrite(LASER, HIGH);
     int x = 0;
-
-    int temps[12];
     for (int j = 0; j < 12; j++) {
       //while(stepper_state==MOVING){}
       int temp = analogRead(A0);
-      temps[j] = temp;
+      //Serial.print(temp);
+      //Serial.print(" ");
       if (temp > x) {
         x = temp;
       }
@@ -308,37 +284,19 @@ void loop() {
     digitalWrite(LASER, LOW);
 
 
-
-    uint8_t packet0 = (i << 4) | ((x >> 7) & 0xF);
-    uint8_t packet1 = (1 << 7) | (x & 0x7F);
-    Serial.write(packet0);
-    Serial.write(packet1);
-    
-    // if (mode == CALIBRATE) {
-    //   Serial.print(pos);
-    //   Serial.print(" ");
-    //   for (int j = 0; j < 12; j++) {
-    //     Serial.print(temps[j]);
-    //     Serial.print(" ");
-    //   }
-    //   Serial.println();
-    // }
-
-    // if (mode == HARP) {
-    //   if (x > 1024) {
-    //      Serial.write(i);
-    //      Serial.write(10 + 4); 
-    //   } else if (x > 600) {
-    //      Serial.write(i);
-    //      Serial.write(10 + 1); 
-    //   } else if (x > 200) {
-    //      Serial.write(i);
-    //      Serial.write(10 + 2); 
-    //   } else {
-    //      Serial.write(i);
-    //      Serial.write(10 + 0); 
-    //   }
-    // }
+    if (x > 1024) {
+       Serial.write(i);
+       Serial.write(10 + 4); 
+    } else if (x > 600) {
+       Serial.write(i);
+       Serial.write(10 + 1); 
+    } else if (x > 200) {
+       Serial.write(i);
+       Serial.write(10 + 2); 
+    } else {
+       Serial.write(i);
+       Serial.write(10 + 0); 
+    }
     delayMicroseconds(small_read_delay);
 
     for (int j = 0; j < 2; j++) {
@@ -458,10 +416,6 @@ void ContStepMode()
     ReverseStepDefault();
   }
 }
-
-
-
-
 
 
 
