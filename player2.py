@@ -1,5 +1,4 @@
-"""PyAudio Example: Play a WAVE file."""
-
+""" Code adapted from PyAudio sample program at https://people.csail.mit.edu/hubert/pyaudio/"""
 import pyaudio
 import wave
 import sys
@@ -28,14 +27,10 @@ samples = [
 "samples/68447__pinkyfinger__piano-g.wav",
 "samples/68437__pinkyfinger__piano-a.wav",
 "samples/68438__pinkyfinger__piano-b.wav",
-#"samples/68439__pinkyfinger__piano-bb.wav",
 "samples/68440__pinkyfinger__piano-c.wav",
-#"samples/68441__pinkyfinger__piano-c.wav",
 "samples/68442__pinkyfinger__piano-d.wav",
 "samples/68443__pinkyfinger__piano-e.wav",
-#"samples/68444__pinkyfinger__piano-eb.wav",
 "samples/68445__pinkyfinger__piano-f.wav",
-#"samples/68446__pinkyfinger__piano-f.wav",
 "samples/68448__pinkyfinger__piano-g.wav"]
 
 flute_samples = [
@@ -48,20 +43,25 @@ flute_samples = [
 "flute/B.mp3",
 "flute/high_C.mp3"]
 
+xylophone_samples = [
+"xylophone/232002__danmitch3ll__xylophone-c.wav",
+"xylophone/232008__danmitch3ll__xylophone-d1.wav",
+"xylophone/232007__danmitch3ll__xylophone-e1.wav",
+"xylophone/232006__danmitch3ll__xylophone-f.wav",
+"xylophone/232005__danmitch3ll__xylophone-g.wav",
+"xylophone/232004__danmitch3ll__xylophone-a.wav",
+"xylophone/232003__danmitch3ll__xylophone-b.wav",
+"xylophone/232001__danmitch3ll__xylophone-c2.wav"]
+
+def zscore(x, mean, var):
+    return (x - mean) / (var**0.5)
 
 def octave(pos, val):
-    if val < thresholds[pos][0] + 30:
-        return 0
-    elif val < thresholds[pos][1] + 30:
-        return 2
-    else:
-        return 1
-    # if val > 200:
-    #     return 1
-    # elif val > 140:
-    #     return 2
-    # else:
-    #     return 0
+    #print(thresholds)
+    scores = [abs(zscore(val, t[0], t[1])) for t in thresholds[pos]]
+    if min([0, 2, 1], key=lambda x: scores[x]):
+        print(scores)
+    return min([0, 2, 1], key=lambda x: scores[x])
 
 def play_wav(p, filename, octave=1):
     print("opening", filename)
@@ -80,35 +80,40 @@ def play_wav(p, filename, octave=1):
 
     stream.stop_stream()
     stream.close()
-
+def mean(items):
+    return sum(items) / len(items)
+def variance(items):
+    m = mean(items)
+    return sum([(item - m) ** 2 for item in items]) / len(items)
 def read_calibration(filename):
     data = eval(open(filename).read())
     thresholds = [[0 for _ in range(2)] for __ in range(8)]
-    for index, layer in enumerate(data[:-1]):
+
+    beams = [[[], [], []], [[], [], []], [[], [], []], [[], [], []], [[], [], []], [[], [], []], [[], [], []], [[], [], []]]
+    for index, layer in enumerate(data[0:3]):
         for pos, val in layer:
-            thresholds[pos][index] = max(val, thresholds[pos][index])
-    return thresholds
+            beams[pos][index].append(val)
 
-# if len(sys.argv) < 2:
-#     print("Plays a wave file.\n\nUsage: %s filename.wav" % sys.argv[0])
-#     sys.exit(-1)
+    stats = []
+    print(beams)
+    for beam in beams:
+        beam_stats = []
+        for layer in beam:
+            beam_stats += [[mean(layer), variance(layer)]]
+        stats += [beam_stats]
+    return stats
 
-# wf = wave.open(sys.argv[1], 'rb')
+
 thresholds = read_calibration(sys.argv[2])
 print(thresholds)
 p = pyaudio.PyAudio()
-# threads = [threading.Thread(target=play_wav, args=(p, sample)) for sample in samples*3]
-# for thread in threads:
-#     thread.start()
-#     time.sleep(.15)
-# for thread in threads:
-#     thread.join()
 
 s = serial.Serial(sys.argv[1], 115200)
 s.read(s.in_waiting)
 last_byte=0
 
 vals = [0]*8
+count = [0]*8
 
 while True:
     p0 = struct.unpack('B', s.read())[0]
@@ -118,44 +123,14 @@ while True:
 
     pos = (p0 >> 4) & (0x7)
     val = ((p0 & 0xF) << 7) | (p1 & 0x7F)
-    print(pos, val)
     val = octave(pos, val)
-
-    #print("packet", bin(p0), bin(p1))
-
-    # pos = int(s.read()[0])
-    # if (pos > 7):
-    #     continue
-    # val = int(s.read()[0]) - 10
+    # only play sounds when status changes
     if (val != vals[pos]):
         vals[pos] = val
-        if val == 1:
-            #print(pos, cmajor[pos], cmajor[pos]-13+12*val)
-            threading.Thread(target=play_wav, args=(p, "samples2/" + samples2[cmajor[pos]-13+12*val], 1)).start()
-        elif val == 2:
-            threading.Thread(target=play_wav, args=(p, "samples2/" + samples2[cmajor[pos]-13+12*val], 1)).start()
-            #Popen(['mpg321', flute_samples[pos]], stdout=PIPE, close_fds=True)
-            #threading.Thread(target=play_wav, args=(p, flute_samples[pos], 1)).start()
-    # for i in range(8):
-    #     if (byte & (1 << i)) != 0 and (last_byte & (1 << i)) == 0: samples2[cmajor[pos]+12*val-13]
-    #         threading.Thread(target=play_wav, args=(p, samples[i])).start()
-    # last_byte = byte
+        if val == 2:
+            threading.Thread(target=play_wav, args=(p, "samples2/" + samples2[cmajor[pos]-13+12*1], 1)).start()
+        elif val == 1:
+            threading.Thread(target=play_wav, args=(p, xylophone_samples[pos], 1)).start()
     
 
 p.terminate()
-
-# stream = p.open(format=p.get_format_from_width(wf.getsampwidth()),
-#                 channels=wf.getnchannels(),
-#                 rate=wf.getframerate(),
-#                 output=True)
-
-# data = wf.readframes(CHUNK)
-
-# while data != '':
-#     stream.write(data)
-#     data = wf.readframes(CHUNK)
-
-# stream.stop_stream()
-# stream.close()
-
-

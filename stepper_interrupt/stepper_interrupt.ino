@@ -6,6 +6,8 @@
 #define DIR  8
 #define LASER 5
 #define BUTTON 6
+#define SAMPLES 12
+#define CALIBRATING false
 
 
 
@@ -18,7 +20,7 @@ void setup() {
   pinMode(EN, OUTPUT);
   pinMode(LASER, OUTPUT);
   pinMode(BUTTON, INPUT_PULLUP);
-  analogReference(EXTERNAL);
+  analogReference(DEFAULT);
 
 
   resetBEDPins(); //Set step, direction, microstep and enable pins to default states
@@ -43,8 +45,10 @@ void loop() {
   // sweep left
   for (int i = 0; i < 7; i++) {
 
+    
+
     // delay due to inertia of mirror
-    delayMicroseconds(1000);
+    delayMicroseconds(3000);
 
     // collect and publish sensor data over serial
     // checks if laser beam is broken
@@ -64,7 +68,7 @@ void loop() {
 
   // sweep right
   for (int i = 7; i > 0; i--) {
-    delayMicroseconds(1000);
+    delayMicroseconds(3000);
     publish_sample(i);
     for (int j = 0; j < 2; j++) {
       digitalWrite(STEP, HIGH);
@@ -80,10 +84,12 @@ void publish_sample(int pos) {
  // turn on the laser only when collecting data
   digitalWrite(LASER, HIGH);
 
-  // take the max of 12 samples
+  // take the max of <SAMPLES> samples
+  int temps[SAMPLES];
   int x = 0;
-  for (int j = 0; j < 12; j++) {
+  for (int j = 0; j < SAMPLES; j++) {
     int temp = analogRead(A0);
+    temps[j] = temp;
     if (temp > x) {
       x = temp;
     }
@@ -92,11 +98,26 @@ void publish_sample(int pos) {
   // turn off the laser after collecting data
   digitalWrite(LASER, LOW);
 
-  // publish the mirror position and highest reading over serial
-  uint8_t packet0 = (pos << 4) | ((x >> 7) & 0xF);
-  uint8_t packet1 = (1 << 7) | (x & 0x7F);
-  Serial.write(packet0);
-  Serial.write(packet1); 
+  if (CALIBRATING) {
+
+    Serial.print(pos);
+    Serial.print(" ");
+          
+    for (int i = 0; i < SAMPLES; i++) {
+      Serial.print(temps[i]);
+      Serial.print(" ");
+
+    }
+    Serial.println();
+  } else {
+    // publish the mirror position and highest reading over serial
+    uint8_t packet0 = (pos << 4) | ((x >> 7) & 0xF);
+    uint8_t packet1 = (1 << 7) | (x & 0x7F);
+    Serial.write(packet0);
+    Serial.write(packet1); 
+
+  }
+
 }
 
 void resetBEDPins()
@@ -108,4 +129,5 @@ void resetBEDPins()
   digitalWrite(MS2, LOW);
   digitalWrite(MS3, LOW);
 }
+
 

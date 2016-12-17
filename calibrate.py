@@ -7,50 +7,46 @@ import numpy as np
 import matplotlib.pyplot as plt
 import matplotlib.ticker as ticker
 
-def collect_data(s, delay):
-    data = []
-    s.read(s.in_waiting)
-    start = time.time()
-    while time.time() - start < delay:
-        p0 = struct.unpack('B', s.read())[0]
-        if p0 >> 7 != 0:
-            continue
-        p1 = struct.unpack('B', s.read())[0]
+# def collect_data(s, delay):
+#     data = []
+#     s.read(s.in_waiting)
+#     start = time.time()
+#     while time.time() - start < delay:
+#         p0 = struct.unpack('B', s.read())[0]
+#         if p0 >> 7 != 0:
+#             continue
+#         p1 = struct.unpack('B', s.read())[0]
 
-        pos = (p0 >> 4) & (0x7)
-        val = ((p0 & 0xF) << 7) | (p1 & 0x7F)
-        data.append((pos, val))
-    return data
+#         pos = (p0 >> 4) & (0x7)
+#         val = ((p0 & 0xF) << 7) | (p1 & 0x7F)
+#         data.append((pos, val))
+#     return data
 
-octaves = int(raw_input("How many octaves?"))
-delay = int(raw_input("How many seconds of calibration at each stage?"))
+# octaves = int(raw_input("How many octaves?"))
+# delay = int(raw_input("How many seconds of calibration at each stage?"))
 
-s = serial.Serial(sys.argv[1], 115200)
+# s = serial.Serial(sys.argv[1], 115200)
 
-data = []
+# data = []
 
-raw_input("Press enter to calibrate ceiling...")
-print("Calibrating ceiling...")
-data.append(collect_data(s, delay))
-print("Done")
-print()
-for octave in range(octaves):
-    raw_input("Press enter to calibrate octave %d..." % octave)
-    data.append(collect_data(s, delay))
-    print("Done")
-    print()
+# raw_input("Press enter to calibrate ceiling...")
+# print("Calibrating ceiling...")
+# data.append(collect_data(s, delay))
+# print("Done")
+# print()
+# for octave in range(octaves):
+#     raw_input("Press enter to calibrate octave %d..." % octave)
+#     data.append(collect_data(s, delay))
+#     print("Done")
+#     print()
 
-with open(sys.argv[2], "w") as f:
-    f.write(str(data))
+# with open(sys.argv[2], "w") as f:
+#     f.write(str(data))
 
-# print(ceiling_data)
+with open(sys.argv[2]) as f:
+    data = f.read().replace('\n', '')
 
-# print(octaves_data)
-
-# with open("octave_data.txt") as f:
-#     data = f.read().replace('\n', '')
-
-# data = eval(data)
+data = eval(data)
 
 for lvl in range(3):
     for bar in range(8):
